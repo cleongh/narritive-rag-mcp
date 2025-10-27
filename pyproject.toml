@@ -1,0 +1,14 @@
+[project]
+name = "llamafile-story"
+version = "0.1.0"
+description = "A project that uses LangChain with llamafile and MCP server for generating stories"
+requires-python = ">=3.10"
+dependencies = [
+    "langchain-openai>=0.1.0",
+    "langchain>=0.1.0",
+    "langchain-community>=0.1.0",
+    "mcp>=1.0.0",
+    "anyio>=4.0.0",
+    "faiss-cpu>=1.7.4",
+    "sentence-transformers>=2.2.0",
+]
