@@ -23,6 +23,7 @@ uv sync
 
 ```bash
 ./32-google_gemma-3-12b-it-Q4_K_M.llamafile --server --nobrowser -ngl 15
+./DeepSeek-R1-Distill-Qwen-14B-Q4_K_M.llamafile --server --nobrowser -ngl 35 --gpu nvidia
 ```
 
 Wait until you see it's serving on http://localhost:8080
@@ -43,7 +44,7 @@ You should see:
 ### 3\. Run the story generator (Terminal 3)
 
 ```bash
-uv run python llamafile_story.py
+uv run python llm_story.py
 ```
 
 This will:

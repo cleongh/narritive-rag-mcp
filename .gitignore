@@ -27,3 +27,9 @@ Thumbs.db
 requirements.txt
 mcp_bridge_minimal.py
 test_bridge.py
+objetivo.md
+.faiss_my_docs/index.faiss
+.faiss_my_docs/index.pkl
+llama.log
+output-llm.md
+rag-mcp.py~

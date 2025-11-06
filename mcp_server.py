@@ -7,15 +7,17 @@ from mcp.types import Tool, TextContent
 
 # List of typical elf names
 ELF_FIRST_NAMES = [
-    "Legolas", "Galadriel", "Elrond", "Arwen", "Thranduil",
-    "Celeborn", "Haldir", "Tauriel", "Glorfindel", "Erestor",
-    "Lindir", "Rumil", "Orophin", "Elladan", "Elrohir"
+    "Luis"
+    # "Legolas", "Galadriel", "Elrond", "Arwen", "Thranduil",
+    # "Celeborn", "Haldir", "Tauriel", "Glorfindel", "Erestor",
+    # "Lindir", "Rumil", "Orophin", "Elladan", "Elrohir"
 ]
 
 ELF_LAST_NAMES = [
-    "Greenleaf", "Starlight", "Moonwhisper", "Silverbrook",
-    "Nightingale", "Sunweaver", "Forestsong", "Windwalker",
-    "Dawnbringer", "Shadowstep", "Lightbringer", "Oakenshield"
+    "Agulló"
+    # "Greenleaf", "Starlight", "Moonwhisper", "Silverbrook",
+    # "Nightingale", "Sunweaver", "Forestsong", "Windwalker",
+    # "Dawnbringer", "Shadowstep", "Lightbringer", "Oakenshield"
 ]
 
 app = Server("elf-name-server")

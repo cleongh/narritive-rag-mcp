@@ -5,12 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Ejecutar script",
+            "name": "Ejecutar query",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "uv sync and llm",
+            "program": "${workspaceFolder}/llm_story.py",
+            "console": "integratedTerminal"
+        },
+         {
+            "name": "Ejecutar servidor MCP",
             "type": "debugpy",
             "request": "launch",
             "preLaunchTask": "uv_sync",
-            "program": "${workspaceFolder}/llamafile_story.py",
-            "console": "integratedTerminal"
+            "program": "${workspaceFolder}/mcp_bridge.py",
+            "console": "integratedTerminal",
         }
     ]
 }

@@ -5,6 +5,32 @@
             "label": "uv_sync",
             "type": "shell",
             "command": "~/.local/bin/uv sync"
+        },
+        {
+            "label": "lanzar LLM (para 8GB VRAM)",
+            "type": "shell",
+            "isBackground": true,
+            "command": "~/programas/DeepSeek-R1-Distill-Qwen-14B-Q4_K_M.llamafile --server --nobrowser -ngl 32 --gpu nvidia",
+            "problemMatcher": {
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^llama_model_loader(.*)$",
+                    "endsPattern": "^llama server listening at(.*)$"
+                }
+                ,
+                "pattern": {
+                    "regexp": "^llama server listening at(.*)$",
+                    "message": 0
+                }
+            }
+        },
+        {
+            "label": "uv sync and llm",
+            "dependsOn": [
+                "uv_sync",
+                "lanzar LLM (para 8GB VRAM)"
+            ],
+            "dependsOrder": "sequence"
         }
     ]
 }
