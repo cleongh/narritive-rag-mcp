@@ -13,6 +13,8 @@ Here is some relevant context from The Silmarillion:
 
 Now, write a short creative story about an elf learning to paint. Use the get_elf_name function to generate an elf name for the character, then write the story using that name. 
 
+the get_elf_name function Returns a randomly generated typical elf name from Tolkien's legendarium. Use it, it is mandatory.
+
 Draw inspiration from the context provided above, incorporating themes of:
 - The Elven love of beauty and art
 - The craftsmanship and creativity of the Noldor
