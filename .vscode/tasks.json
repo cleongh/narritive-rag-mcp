@@ -75,6 +75,13 @@
 			"command": "~/.local/bin/uv run python mcp_bridge_simple.py",
 			"isBackground": true,
 			"problemMatcher": []
+		},
+		{
+			"label": "MCP Bridge with 3 Tools",
+			"type": "shell",
+			"command": "~/.local/bin/uv run python mcp_bridge_simple.py",
+			"isBackground": true,
+			"problemMatcher": []
 		}
 	]
 }

@@ -5,6 +5,7 @@ A Python project that uses LangChain to connect to a locally running llamafile, 
 ## Features
 
 - **Simulated MCP Tool Calling**: Works with ANY LLM (Gemma, DeepSeek, etc.) using prompt-based tool invocation
+- **Multiple Tools**: Three example tools for story generation (character names, locations, events)
 - **RAG**: Uses The Silmarillion text to provide rich contextual knowledge
 - **Local LLM**: Runs entirely locally using llamafile
 - **Reliable**: Simple Flask-based bridge that's easy to debug and understand
@@ -80,6 +81,11 @@ uv run python llm_story_simple.py
 uv run python llm_story_working.py
 ```
 
+**Enhanced version (using multiple tools):**
+```bash
+uv run python llm_story_with_tools.py
+```
+
 This will:
 1. Check MCP bridge connectivity
 2. Load The Silmarillion for RAG (if using `llm_story_working.py`)
@@ -87,13 +93,19 @@ This will:
 4. Request a story about an elf learning to paint
 5. The LLM outputs `TOOL_CALL: get_elf_name(count=1)`
 6. The bridge calls the MCP tool and gets a name (e.g., "Luis Agulló")
-7. The LLM generates a Tolkien-style story using that name and RAG context
+7. The LLM may call other tools (location, events) as needed
+8. The LLM generates a Tolkien-style story using the tool results and RAG context
 
 ## Testing
 
 **Test the bridge is working:**
 ```bash
 uv run python test_simple_bridge.py
+```
+
+**Test all three tools:**
+```bash
+uv run python test_all_tools.py
 ```
 
 **Check bridge health:**
@@ -111,14 +123,17 @@ uv run python test_tool_calling.py
 ```
 .
 ├── mcp_bridge_simple.py      # Working simulated MCP bridge (Flask-based)
-├── mcp_server.py              # MCP server with get_elf_name tool
+├── mcp_server.py              # MCP server with 3 tools (names, locations, events)
 ├── llm_query.py               # LangChain integration with RAG
 ├── llm_story_simple.py        # Simple story generator (no RAG)
 ├── llm_story_working.py       # Full RAG + MCP story generator
+├── llm_story_with_tools.py    # Using multiple tools
 ├── test_simple_bridge.py      # Test the bridge
+├── test_all_tools.py          # Test all three tools
 ├── test_deepseek_tools.py     # Test if models support native function calling
 ├── silmarillion.txt           # RAG knowledge base
-└── README.md                  # This file
+├── README.md                  # This file
+└── TOOLS_REFERENCE.md         # Complete tools documentation
 ```
 
 ## Which Models Support Native Function Calling?
@@ -160,6 +175,15 @@ pkill -f "mcp_bridge"
 ```
 
 ## Advanced: Creating Your Own MCP Tools
+
+The system now includes **three example tools**:
+- `get_elf_name(count=1)` - Generate character names
+- `get_location_description(style='brief')` - Generate settings
+- `get_random_event()` - Generate plot events
+
+See **[TOOLS_REFERENCE.md](TOOLS_REFERENCE.md)** for complete documentation.
+
+### Quick Add Tool Example
 
 Edit `mcp_server.py` to add new tools:
 

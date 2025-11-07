@@ -38,8 +38,9 @@ def call_mcp_tool(tool_name: str, arguments: dict) -> str:
     """Call an MCP tool directly - simplified version"""
     print(f"[MCP] Calling tool: {tool_name} with args: {arguments}", file=sys.stderr)
     
-    # For now, directly implement the elf name generation
+    # Direct implementation of MCP tools
     # In a full implementation, this would communicate with the MCP server
+    
     if tool_name == "get_elf_name":
         import random
         first_names = ["Luis"]
@@ -54,6 +55,58 @@ def call_mcp_tool(tool_name: str, arguments: dict) -> str:
         print(f"[MCP] Tool result: {result}", file=sys.stderr)
         return result
     
+    elif tool_name == "get_location_description":
+        import random
+        locations = [
+            "the Golden Wood of Lothlórien",
+            "the Grey Havens by the sea",
+            "the halls of Rivendell",
+            "the gardens of Valinor",
+            "the forests of Mirkwood",
+            "the towers of Gondolin",
+            "the shores of Númenor",
+            "the realm of Doriath"
+        ]
+        features = [
+            "where ancient trees whisper secrets of old",
+            "bathed in the eternal light of the Two Trees",
+            "where the stars shine brighter than elsewhere in Middle-earth",
+            "protected by enchantments woven in the Elder Days",
+            "where time flows differently than in mortal lands",
+            "adorned with fountains that sing melodious songs",
+            "where the air itself seems to shimmer with magic",
+            "overlooking valleys filled with silver mist"
+        ]
+        
+        style = arguments.get("style", "brief")
+        location = random.choice(locations)
+        feature = random.choice(features)
+        
+        if style == "detailed":
+            result = f"{location}, {feature}"
+        else:
+            result = location
+        
+        print(f"[MCP] Tool result: {result}", file=sys.stderr)
+        return result
+    
+    elif tool_name == "get_random_event":
+        import random
+        events = [
+            "discovers a hidden talent they never knew they possessed",
+            "must choose between duty and personal desire",
+            "receives a mysterious visitor bearing urgent news",
+            "finds an ancient artifact with unknown powers",
+            "witnesses a rare celestial phenomenon that changes everything",
+            "must overcome their greatest fear to help a friend",
+            "uncovers a long-buried secret about their heritage",
+            "faces a challenge that tests their deepest beliefs"
+        ]
+        
+        result = random.choice(events)
+        print(f"[MCP] Tool result: {result}", file=sys.stderr)
+        return result
+    
     return f"Unknown tool: {tool_name}"
 
 def create_system_prompt() -> str:
@@ -64,18 +117,22 @@ TOOL_CALL: function_name(arg1=value1, arg2=value2)
 
 Available tools:
 - get_elf_name(count=1): Returns randomly generated elf names from Tolkien's legendarium
+- get_location_description(style='brief'): Returns a Tolkien-inspired location (style: 'brief' or 'detailed')
+- get_random_event(): Returns a random story event or conflict
 
 IMPORTANT: 
 - Output the TOOL_CALL on its own line
 - After you output a TOOL_CALL, STOP and wait for the result
 - When you receive a TOOL_RESULT, use it naturally in your response
-- Do NOT make up names, always use the tool
+- Do NOT make up names, locations, or events - always use the tools
 
 Example:
-User: Generate an elf name for a story
+User: Generate an elf name and a location
 Assistant: TOOL_CALL: get_elf_name(count=1)
 [System provides result]
-Assistant: Here's your elf name: [use the provided name]
+Assistant: TOOL_CALL: get_location_description(style='detailed')
+[System provides result]
+Assistant: Here's your character: [use the provided name] in [use the provided location]
 """
 
 def extract_tool_call(text: str) -> Optional[tuple[str, dict]]:
