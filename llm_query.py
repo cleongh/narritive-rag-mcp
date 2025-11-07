@@ -44,8 +44,9 @@ def retrieve_context(query: str, k: int = 3) -> str:
         return ""
 
     docs = vector_store.similarity_search(query, k=k)
-    context = "\n\n".join([doc.page_content for doc in docs])
-    return context
+    # Limit context size to avoid overwhelming the LLM
+    context = "\n\n".join([doc.page_content[:400] for doc in docs])
+    return context[:1500]  # Max 1500 chars of context
 
 
 async def main(prompt, query, llm_ip, port, timeout, file):
@@ -72,15 +73,15 @@ async def main(prompt, query, llm_ip, port, timeout, file):
         api_key="not-needed",  # type: ignore
         model="local-model",
         temperature=0.7,
+        max_tokens=600,  # Limit response length for faster generation
         max_retries=2,
         request_timeout=300.0  # type: ignore
     )
 
     print("Requesting answer from llamafile via MCP bridge...\n")
 
-    # Retrieve relevant context from Silmarillion
-    # query = "elf painting art creativity Valinor Noldor craftsmanship"
-    context = retrieve_context(query, k=3)
+    # Retrieve relevant context from Silmarillion (reduced k for less context)
+    context = retrieve_context(query, k=2)
 
     prompt = prompt(context)
 

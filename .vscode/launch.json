@@ -8,7 +8,7 @@
             "name": "Ejecutar query",
             "type": "debugpy",
             "request": "launch",
-            "preLaunchTask": "uv sync and llm",
+            //"preLaunchTask": "uv sync and llm",
             "program": "${workspaceFolder}/llm_story.py",
             "console": "integratedTerminal"
         },

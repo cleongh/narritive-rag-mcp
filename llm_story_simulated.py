@@ -1,26 +1,29 @@
-
 from llm_query import query
 
 if __name__ == "__main__":
 
     response = query("very short story of elf painting art creativity Valinor Noldor craftsmanship",
                      file="silmarillion.txt",
+                     port=8081,  # Use the simulated bridge
                      prompt=lambda context: f"""You are writing a story inspired by J.R.R. Tolkien's legendarium.
 
 Here is some relevant context from The Silmarillion:
 
 {context}
 
-TASK: Write a short creative story about an elf learning to paint. 
+TASK: Write a short creative story (300-400 words) about an elf learning to paint.
 
-IMPORTANT: You MUST use the get_elf_name tool/function to generate an authentic elf name for your character. Call the tool first, then use the returned name in your story.
+STEP 1: First, you MUST call the get_elf_name function to generate an authentic elf name.
+        Output: TOOL_CALL: get_elf_name(count=1)
 
-Draw inspiration from the context provided above, incorporating themes of:
+STEP 2: After you receive the name, write the story using that name.
+
+The story should incorporate themes of:
 - The Elven love of beauty and art
 - The craftsmanship and creativity of the Noldor
 - The light of Valinor and the Two Trees
 
-Write the story in a style reminiscent of Tolkien (about 300-400 words).""")
+Write in a style reminiscent of Tolkien.""")
 
     output = response.content
 

@@ -116,6 +116,10 @@ async def chat_completions(request: Request):
         if "tools" not in body:
             body["tools"] = format_tools_for_openai()
         
+        # Enable tool calling - "auto" lets the model decide when to use tools
+        if "tool_choice" not in body:
+            body["tool_choice"] = "auto"
+        
         messages = body.get("messages", [])
         max_iterations = 5
         
@@ -132,6 +136,9 @@ async def chat_completions(request: Request):
             
             for iteration in range(max_iterations):
                 print(f"\n=== Iteration {iteration + 1} ===")
+                print(f"Sending {len(messages)} messages to llamafile")
+                print(f"Tools available: {len(body.get('tools', []))}")
+                print(f"Tool choice: {body.get('tool_choice', 'not set')}")
                 
                 # Call llamafile
                 try:
@@ -151,6 +158,10 @@ async def chat_completions(request: Request):
                 response_message = result["choices"][0]["message"]
                 
                 print(f"Response message keys: {response_message.keys()}")
+                print(f"Response message content preview: {response_message.get('content', '')[:200]}")
+                print(f"Has tool_calls: {'tool_calls' in response_message}")
+                if 'tool_calls' in response_message:
+                    print(f"Tool calls: {response_message['tool_calls']}")
                 
                 # Check if there are tool calls
                 if "tool_calls" in response_message and response_message["tool_calls"]:
