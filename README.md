@@ -55,7 +55,7 @@ Wait until you see `llama server listening at http://localhost:8080`
 
 The bridge code is split into a library and an example runner.
 
-- Library: `mcp_bridge_simple.py` exports `create_bridge_app(...)` and `run_bridge(...)`.
+- Library: `bridge.py` exports `create_bridge_app(...)` and `run_bridge(...)`.
 - Example runner: `mcp_bridge_example.py` defines the example tools (elf names, locations, events) and runs the bridge.
 
 Run the example bridge:
