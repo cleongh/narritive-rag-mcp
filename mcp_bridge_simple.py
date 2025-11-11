@@ -5,25 +5,29 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
-from flask import Flask, request, jsonify
-import requests
+# Flask is imported lazily inside create_bridge_app so the module can be imported
+# even when Flask is not installed. This makes the library usable without the
+# web framework for programmatic use.
+try:
+    import requests
+except Exception:  # pragma: no cover - optional dependency
+    requests = None
 
-app = Flask(__name__)
 
 # Llamafile backend
 LLAMAFILE_URL = "http://localhost:8080"
 
-# MCP server process
+# MCP server process (optional subprocess starter kept for compatibility)
 mcp_process = None
 
-def start_mcp_server():
-    """Start the MCP server as a subprocess"""
+def start_mcp_server_subprocess():
+    """Start the MCP server as a subprocess using the local mcp_server.py
+    (kept for backward compatibility with older workflows).
+    """
     global mcp_process
-    
     if mcp_process is None:
         server_path = Path(__file__).parent / "mcp_server.py"
         print(f"Starting MCP server: {server_path}", file=sys.stderr)
-        
         mcp_process = subprocess.Popen(
             ["python", str(server_path)],
             stdin=subprocess.PIPE,
@@ -34,97 +38,43 @@ def start_mcp_server():
         )
         print("✓ MCP server started", file=sys.stderr)
 
-def call_mcp_tool(tool_name: str, arguments: dict) -> str:
-    """Call an MCP tool directly - simplified version"""
-    print(f"[MCP] Calling tool: {tool_name} with args: {arguments}", file=sys.stderr)
-    
-    # Direct implementation of MCP tools
-    # In a full implementation, this would communicate with the MCP server
-    
-    if tool_name == "get_elf_name":
-        import random
-        first_names = ["Luis"]
-        last_names = ["Agulló"]
-        count = arguments.get("count", 1)
-        
-        names = []
-        for _ in range(count):
-            names.append(f"{random.choice(first_names)} {random.choice(last_names)}")
-        
-        result = ", ".join(names) if count > 1 else names[0]
-        print(f"[MCP] Tool result: {result}", file=sys.stderr)
-        return result
-    
-    elif tool_name == "get_location_description":
-        import random
-        locations = [
-            "the Golden Wood of Lothlórien",
-            "the Grey Havens by the sea",
-            "the halls of Rivendell",
-            "the gardens of Valinor",
-            "the forests of Mirkwood",
-            "the towers of Gondolin",
-            "the shores of Númenor",
-            "the realm of Doriath"
-        ]
-        features = [
-            "where ancient trees whisper secrets of old",
-            "bathed in the eternal light of the Two Trees",
-            "where the stars shine brighter than elsewhere in Middle-earth",
-            "protected by enchantments woven in the Elder Days",
-            "where time flows differently than in mortal lands",
-            "adorned with fountains that sing melodious songs",
-            "where the air itself seems to shimmer with magic",
-            "overlooking valleys filled with silver mist"
-        ]
-        
-        style = arguments.get("style", "brief")
-        location = random.choice(locations)
-        feature = random.choice(features)
-        
-        if style == "detailed":
-            result = f"{location}, {feature}"
-        else:
-            result = location
-        
-        print(f"[MCP] Tool result: {result}", file=sys.stderr)
-        return result
-    
-    elif tool_name == "get_random_event":
-        import random
-        events = [
-            "discovers a hidden talent they never knew they possessed",
-            "must choose between duty and personal desire",
-            "receives a mysterious visitor bearing urgent news",
-            "finds an ancient artifact with unknown powers",
-            "witnesses a rare celestial phenomenon that changes everything",
-            "must overcome their greatest fear to help a friend",
-            "uncovers a long-buried secret about their heritage",
-            "faces a challenge that tests their deepest beliefs"
-        ]
-        
-        result = random.choice(events)
-        print(f"[MCP] Tool result: {result}", file=sys.stderr)
-        return result
-    
-    return f"Unknown tool: {tool_name}"
+def call_mcp_tool_stub(tool_name: str, arguments: dict) -> str:
+    """Stub function for MCP tool calls used when no tool executor is provided.
 
-def create_system_prompt() -> str:
-    """System prompt that teaches the LLM how to call tools"""
-    return """You are a helpful assistant with access to tools. When you need to use a tool, you MUST output it in this EXACT format on a line by itself:
+    This function simply returns a diagnostic string and should be replaced
+    by an actual MCP tool executor (for example, calling `start_mcp_server` /
+    talking to stdio, or sending requests to a running MCP process).
+    """
+    print(f"[MCP-STUB] No tool executor configured. Called: {tool_name} with {arguments}", file=sys.stderr)
+    return f"MCP_STUB_RESULT: {tool_name}({arguments})"
+
+
+# Pluggable MCP tool executor. Callers may assign a different callable that
+# accepts (tool_name: str, arguments: dict) -> str. By default we use the stub.
+mcp_tool_executor = call_mcp_tool_stub
+
+def create_system_prompt(available_tools: list[str] | None = None) -> str:
+    """Return the system prompt teaching the LLM how to call tools.
+
+    If `available_tools` is provided, list them in the prompt. Otherwise the
+    prompt will mention that tools are available without enumerating them.
+    """
+    tools_section = "Available tools are provided by the MCP bridge."
+    if available_tools:
+        tools_lines = [f"- {t}" for t in available_tools]
+        tools_section = "Available tools:\n" + "\n".join(tools_lines)
+
+    return f"""You are a helpful assistant with access to tools. When you need to use a tool, you MUST output it in this EXACT format on a line by itself:
 
 TOOL_CALL: function_name(arg1=value1, arg2=value2)
 
-Available tools:
-- get_elf_name(count=1): Returns randomly generated elf names from Tolkien's legendarium
-- get_location_description(style='brief'): Returns a Tolkien-inspired location (style: 'brief' or 'detailed')
-- get_random_event(): Returns a random story event or conflict
+{tools_section}
 
 IMPORTANT: 
 - Output the TOOL_CALL on its own line
 - After you output a TOOL_CALL, STOP and wait for the result
 - When you receive a TOOL_RESULT, use it naturally in your response
-- Do NOT make up names, locations, or events - always use the tools
+- Do NOT invent or hallucinate tool results - always use the provided TOOL_RESULT
 
 Example:
 User: Generate an elf name and a location
@@ -165,68 +115,92 @@ def extract_tool_call(text: str) -> Optional[tuple[str, dict]]:
     print(f"[PARSE] Extracted: {function_name}({arguments})", file=sys.stderr)
     return function_name, arguments
 
-@app.route('/v1/chat/completions', methods=['POST'])
-def chat_completions():
-    """Handle chat completions with simulated tool calling"""
-    try:
-        body = request.get_json()
-        messages = body.get("messages", [])
-        
-        # Add system prompt
-        enhanced_messages = [
-            {"role": "system", "content": create_system_prompt()}
-        ] + messages
-        
-        max_iterations = 5
-        
-        for iteration in range(max_iterations):
-            print(f"\n{'='*60}", file=sys.stderr)
-            print(f"Iteration {iteration + 1}/{max_iterations}", file=sys.stderr)
-            print(f"{'='*60}", file=sys.stderr)
-            
-            # Prepare request for llamafile
-            llm_request = {
-                "model": body.get("model", "local-model"),
-                "messages": enhanced_messages,
-                "temperature": body.get("temperature", 0.7),
-                "max_tokens": body.get("max_tokens", 600),  # Reasonable limit
-                "stream": False
-            }
-            
-            print(f"Sending to llamafile with {len(enhanced_messages)} messages", file=sys.stderr)
-            
-            # Call llamafile
-            try:
-                response = requests.post(
-                    f"{LLAMAFILE_URL}/v1/chat/completions",
-                    json=llm_request,
-                    timeout=180.0  # Increased timeout for complex requests
-                )
-                response.raise_for_status()
-            except requests.exceptions.RequestException as e:
-                print(f"[ERROR] Llamafile request failed: {e}", file=sys.stderr)
-                return jsonify({"error": f"Llamafile request failed: {str(e)}"}), 502
-            
-            result = response.json()
-            assistant_message = result["choices"][0]["message"]["content"]
-            
-            print(f"\n[LLM Response ({len(assistant_message)} chars)]:", file=sys.stderr)
-            print(assistant_message[:300], file=sys.stderr)
-            if len(assistant_message) > 300:
-                print("...(truncated)", file=sys.stderr)
-            
-            # Check for tool call
-            tool_call = extract_tool_call(assistant_message)
-            
-            if tool_call:
-                function_name, arguments = tool_call
-                print(f"\n✓ Tool call detected!", file=sys.stderr)
-                
-                # Call the MCP tool
+def create_bridge_app(llamafile_url: str = LLAMAFILE_URL, mcp_executor=None):
+    """Factory that creates and returns a Flask app wired to the bridge handlers.
+
+    This avoids importing Flask at module import time; callers who want to run
+    the HTTP bridge can call this function.
+    """
+    from flask import Flask, request, jsonify
+
+    app = Flask(__name__)
+
+    # Use provided executor or the module-level default
+    executor = mcp_executor or mcp_tool_executor
+
+    @app.route('/v1/chat/completions', methods=['POST'])
+    def chat_completions():
+        """Handle chat completions with simulated tool calling"""
+        try:
+            body = request.get_json()
+            messages = body.get("messages", [])
+
+            # Add system prompt (do not enumerate tools here to keep it generic)
+            enhanced_messages = [
+                {"role": "system", "content": create_system_prompt()}
+            ] + messages
+
+            max_iterations = 5
+
+            for iteration in range(max_iterations):
+                print(f"\n{'='*60}", file=sys.stderr)
+                print(f"Iteration {iteration + 1}/{max_iterations}", file=sys.stderr)
+                print(f"{'='*60}", file=sys.stderr)
+
+                # Prepare request for llamafile
+                llm_request = {
+                    "model": body.get("model", "local-model"),
+                    "messages": enhanced_messages,
+                    "temperature": body.get("temperature", 0.7),
+                    "max_tokens": body.get("max_tokens", 600),  # Reasonable limit
+                    "stream": False
+                }
+
+                print(f"Sending to llamafile with {len(enhanced_messages)} messages", file=sys.stderr)
+
+                # Call llamafile
                 try:
-                    tool_result = call_mcp_tool(function_name, arguments)
-                    
-                    # Add messages to conversation
+                    response = requests.post(
+                        f"{llamafile_url}/v1/chat/completions",
+                        json=llm_request,
+                        timeout=180.0  # Increased timeout for complex requests
+                    )
+                    response.raise_for_status()
+                except requests.exceptions.RequestException as e:
+                    print(f"[ERROR] Llamafile request failed: {e}", file=sys.stderr)
+                    return jsonify({"error": f"Llamafile request failed: {str(e)}"}), 502
+
+                result = response.json()
+                assistant_message = result["choices"][0]["message"]["content"]
+
+                print(f"\n[LLM Response ({len(assistant_message)} chars)]:", file=sys.stderr)
+                print(assistant_message[:300], file=sys.stderr)
+                if len(assistant_message) > 300:
+                    print("...(truncated)", file=sys.stderr)
+
+                # Check for tool call
+                tool_call = extract_tool_call(assistant_message)
+
+                if tool_call:
+                    function_name, arguments = tool_call
+                    print(f"\n✓ Tool call detected!", file=sys.stderr)
+
+                    # Call the MCP tool (pluggable executor)
+                    try:
+                        tool_result = executor(function_name, arguments)
+                    except Exception as e:
+                        print(f"[ERROR] Tool call failed: {e}", file=sys.stderr)
+                        enhanced_messages.append({
+                            "role": "assistant",
+                            "content": assistant_message
+                        })
+                        enhanced_messages.append({
+                            "role": "user",
+                            "content": f"TOOL_ERROR: {str(e)}\n\nPlease continue without the tool."
+                        })
+                        continue
+
+                    # Add messages to conversation with the tool result
                     enhanced_messages.append({
                         "role": "assistant",
                         "content": assistant_message
@@ -235,66 +209,115 @@ def chat_completions():
                         "role": "user",
                         "content": f"TOOL_RESULT: {tool_result}\n\nNow continue with your response using this information. Do not call the tool again."
                     })
-                    
+
                     print(f"[TOOL RESULT] {tool_result}", file=sys.stderr)
                     print("Continuing to next iteration...", file=sys.stderr)
                     continue
-                    
-                except Exception as e:
-                    print(f"[ERROR] Tool call failed: {e}", file=sys.stderr)
-                    enhanced_messages.append({
-                        "role": "assistant",
-                        "content": assistant_message
-                    })
-                    enhanced_messages.append({
-                        "role": "user",
-                        "content": f"TOOL_ERROR: {str(e)}\n\nPlease continue without the tool."
-                    })
-                    continue
-            else:
-                # No tool call, return final response
-                print("\n[DONE] No tool call detected, returning response", file=sys.stderr)
-                return jsonify(result)
-        
-        # Max iterations reached
-        print(f"\n[WARNING] Max iterations ({max_iterations}) reached", file=sys.stderr)
-        return jsonify({"error": "Maximum tool call iterations reached"}), 500
-    
-    except Exception as e:
-        print(f"\n[ERROR] Exception in chat_completions: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"Internal error: {str(e)}"}), 500
+                else:
+                    # No tool call, return final response
+                    print("\n[DONE] No tool call detected, returning response", file=sys.stderr)
+                    return jsonify(result)
 
-@app.route('/health', methods=['GET'])
-def health():
-    """Health check"""
-    return jsonify({
-        "status": "ok",
-        "mode": "simple_simulated_tool_calling"
-    })
+            # Max iterations reached
+            print(f"\n[WARNING] Max iterations ({max_iterations}) reached", file=sys.stderr)
+            return jsonify({"error": "Maximum tool call iterations reached"}), 500
 
-@app.route('/v1/models', methods=['GET'])
-def list_models():
-    """Proxy models endpoint"""
-    try:
-        response = requests.get(f"{LLAMAFILE_URL}/v1/models", timeout=5.0)
-        return jsonify(response.json())
-    except Exception as e:
-        return jsonify({"error": f"Cannot reach llamafile: {str(e)}"}), 503
+        except Exception as e:
+            print(f"\n[ERROR] Exception in chat_completions: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
+            return jsonify({"error": f"Internal error: {str(e)}"}), 500
+
+    @app.route('/health', methods=['GET'])
+    def health():
+        """Health check"""
+        return jsonify({
+            "status": "ok",
+            "mode": "simple_simulated_tool_calling"
+        })
+
+    @app.route('/v1/models', methods=['GET'])
+    def list_models():
+        """Proxy models endpoint"""
+        try:
+            response = requests.get(f"{llamafile_url}/v1/models", timeout=5.0)
+            return jsonify(response.json())
+        except Exception as e:
+            return jsonify({"error": f"Cannot reach llamafile: {str(e)}"}), 503
+
+    return app
 
 if __name__ == "__main__":
+    # Example usage: define default tools locally and set mcp_tool_executor
     print("=" * 60)
-    print("SIMPLE MCP Bridge Server")
+    print("SIMPLE MCP Bridge Server (example mode)")
     print("=" * 60)
     print(f"Bridge:    http://127.0.0.1:8081")
     print(f"Llamafile: {LLAMAFILE_URL}")
-    print("Mode:      Simple simulated tool calling (Flask + requests)")
+    print("Mode:      Example local tools + simulated MCP executor")
     print("=" * 60)
     print()
-    
-    # Start MCP server (optional for this simplified version)
-    # start_mcp_server()
-    
-    # Run Flask app
+
+    # Local example tool implementations (moved from the library)
+    import random
+
+    first_names = ["Luis"]
+    last_names = ["Agulló"]
+
+    locations = [
+        "the Golden Wood of Lothlórien",
+        "the Grey Havens by the sea",
+        "the halls of Rivendell",
+        "the gardens of Valinor",
+        "the forests of Mirkwood",
+        "the towers of Gondolin",
+        "the shores of Númenor",
+        "the realm of Doriath"
+    ]
+
+    features = [
+        "where ancient trees whisper secrets of old",
+        "bathed in the eternal light of the Two Trees",
+        "where the stars shine brighter than elsewhere in Middle-earth",
+        "protected by enchantments woven in the Elder Days",
+        "where time flows differently than in mortal lands",
+        "adorned with fountains that sing melodious songs",
+        "where the air itself seems to shimmer with magic",
+        "overlooking valleys filled with silver mist"
+    ]
+
+    events = [
+        "discovers a hidden talent they never knew they possessed",
+        "must choose between duty and personal desire",
+        "receives a mysterious visitor bearing urgent news",
+        "finds an ancient artifact with unknown powers",
+        "witnesses a rare celestial phenomenon that changes everything",
+        "must overcome their greatest fear to help a friend",
+        "uncovers a long-buried secret about their heritage",
+        "faces a challenge that tests their deepest beliefs"
+    ]
+
+    def local_executor(tool_name: str, arguments: dict) -> str:
+        """Simple local executor using the example tool data above."""
+        if tool_name == "get_elf_name":
+            count = arguments.get("count", 1)
+            names = [f"{random.choice(first_names)} {random.choice(last_names)}" for _ in range(count)]
+            return ", ".join(names) if count > 1 else names[0]
+
+        if tool_name == "get_location_description":
+            style = arguments.get("style", "brief")
+            loc = random.choice(locations)
+            feat = random.choice(features)
+            return f"{loc}, {feat}" if style == "detailed" else loc
+
+        if tool_name == "get_random_event":
+            return random.choice(events)
+
+        return f"UNKNOWN_TOOL: {tool_name}"
+
+    # Assign the example executor so the bridge runs with these tools
+    mcp_tool_executor = local_executor
+
+    # Create and run the Flask app using the example executor
+    app = create_bridge_app(llamafile_url=LLAMAFILE_URL, mcp_executor=mcp_tool_executor)
     app.run(host="127.0.0.1", port=8081, debug=False, threaded=True)

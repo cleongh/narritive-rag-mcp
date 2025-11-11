@@ -1,26 +1,22 @@
 import asyncio
 import random
 import sys
+import inspect
+from typing import Callable, Dict, Any
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-# List of typical elf names
+# --- Data used by default tools ---
 ELF_FIRST_NAMES = [
     "Luis"
-    # "Legolas", "Galadriel", "Elrond", "Arwen", "Thranduil",
-    # "Celeborn", "Haldir", "Tauriel", "Glorfindel", "Erestor",
-    # "Lindir", "Rumil", "Orophin", "Elladan", "Elrohir"
 ]
 
 ELF_LAST_NAMES = [
     "Agulló"
-    # "Greenleaf", "Starlight", "Moonwhisper", "Silverbrook",
-    # "Nightingale", "Sunweaver", "Forestsong", "Windwalker",
-    # "Dawnbringer", "Shadowstep", "Lightbringer", "Oakenshield"
 ]
 
-# Tolkien-inspired locations
 LOCATIONS = [
     "the Golden Wood of Lothlórien",
     "the Grey Havens by the sea",
@@ -43,7 +39,6 @@ LOCATION_FEATURES = [
     "overlooking valleys filled with silver mist"
 ]
 
-# Story events/conflicts
 EVENTS = [
     "discovers a hidden talent they never knew they possessed",
     "must choose between duty and personal desire",
@@ -55,87 +50,96 @@ EVENTS = [
     "faces a challenge that tests their deepest beliefs"
 ]
 
-app = Server("elf-name-server")
 
-@app.list_tools()
-async def list_tools() -> list[Tool]:
-    return [
-        Tool(
-            name="get_elf_name",
-            description="Returns a randomly generated typical elf name from Tolkien's legendarium",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "description": "Number of elf names to generate (default: 1)",
-                        "default": 1
-                    }
-                }
-            }
-        ),
-        Tool(
-            name="get_location_description",
-            description="Returns a description of a Tolkien-inspired location for story settings",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "style": {
-                        "type": "string",
-                        "description": "Style of description: 'brief' or 'detailed' (default: 'brief')",
-                        "default": "brief",
-                        "enum": ["brief", "detailed"]
-                    }
-                }
-            }
-        ),
-        Tool(
-            name="get_random_event",
-            description="Returns a random story event or conflict to drive the narrative forward",
-            inputSchema={
-                "type": "object",
-                "properties": {}
-            }
-        )
-    ]
+def _normalize_handler_result(res: Any) -> list[TextContent]:
+    """Normalize various handler return types into a list[TextContent]."""
+    if isinstance(res, list):
+        # If list of TextContent-like objects or strings
+        contents: list[TextContent] = []
+        for item in res:
+            if isinstance(item, TextContent):
+                contents.append(item)
+            elif isinstance(item, str):
+                contents.append(TextContent(type="text", text=item))
+            else:
+                # Fallback: convert to string
+                contents.append(TextContent(type="text", text=str(item)))
+        return contents
+    elif isinstance(res, TextContent):
+        return [res]
+    else:
+        return [TextContent(type="text", text=str(res))]
 
-@app.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    if name == "get_elf_name":
-        count = arguments.get("count", 1)
+
+def default_tools() -> Dict[str, Dict[str, Any]]:
+    """Return a mapping of default tool definitions and handlers.
+
+    Each entry maps tool_name -> { 'tool': Tool(...), 'handler': callable }
+    The handler will receive a single argument: the parsed arguments dict.
+    """
+    def get_elf_name_handler(arguments: dict):
+        count = int(arguments.get("count", 1))
         names = []
         for _ in range(count):
             first = random.choice(ELF_FIRST_NAMES)
             last = random.choice(ELF_LAST_NAMES)
             names.append(f"{first} {last}")
-        
-        result = ", ".join(names) if count > 1 else names[0]
-        return [TextContent(type="text", text=result)]
-    
-    elif name == "get_location_description":
+        return ", ".join(names) if count > 1 else names[0]
+
+    def get_location_description_handler(arguments: dict):
         style = arguments.get("style", "brief")
         location = random.choice(LOCATIONS)
         feature = random.choice(LOCATION_FEATURES)
-        
-        if style == "detailed":
-            result = f"{location}, {feature}"
-        else:
-            result = location
-        
-        return [TextContent(type="text", text=result)]
-    
-    elif name == "get_random_event":
-        event = random.choice(EVENTS)
-        return [TextContent(type="text", text=event)]
-    
-    raise ValueError(f"Unknown tool: {name}")
+        return f"{location}, {feature}" if style == "detailed" else location
 
-async def main():
+    def get_random_event_handler(arguments: dict):
+        return random.choice(EVENTS)
+
+    # By default the library exposes no built-in tools.
+    # Callers should provide their own tools mapping when starting the server.
+    return {}
+
+
+def create_mcp_server(tools: Dict[str, Dict[str, Any]], server_name: str = "mcp-server") -> Server:
+    """Create and return an MCP Server instance that exposes the provided tools.
+
+    tools: mapping tool_name -> { 'tool': Tool, 'handler': callable }
+    Handlers may be sync or async callables that accept a single dict argument.
+    """
+    app = Server(server_name)
+
+    @app.list_tools()
+    async def _list_tools() -> list[Tool]:
+        return [entry["tool"] for entry in tools.values()]
+
+    @app.call_tool()
+    async def _call_tool(name: str, arguments: dict) -> list[TextContent]:
+        if name not in tools:
+            raise ValueError(f"Unknown tool: {name}")
+
+        handler = tools[name]["handler"]
+
+        # Support both sync and async handlers
+        if inspect.iscoroutinefunction(handler):
+            res = await handler(arguments)
+        else:
+            res = handler(arguments)
+
+        return _normalize_handler_result(res)
+
+    return app
+
+
+async def start_mcp_server(tools: Dict[str, Dict[str, Any]], server_name: str = "mcp-server") -> None:
+    """Start the MCP server over stdio using the provided tools mapping."""
+    app = create_mcp_server(tools, server_name=server_name)
     # Log to stderr so it doesn't interfere with stdio communication
-    print("MCP Server starting...", file=sys.stderr)
+    print(f"MCP Server '{server_name}' starting...", file=sys.stderr)
     async with stdio_server() as (read_stream, write_stream):
         print("MCP Server connected", file=sys.stderr)
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Backwards-compatible CLI: start the default tools
+    asyncio.run(start_mcp_server(default_tools(), server_name="elf-name-server"))
