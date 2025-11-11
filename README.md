@@ -53,19 +53,21 @@ Wait until you see `llama server listening at http://localhost:8080`
 
 ### 2. Start the MCP bridge (Terminal 2)
 
+The bridge code is split into a library and an example runner.
+
+- Library: `mcp_bridge_simple.py` exports `create_bridge_app(...)` and `run_bridge(...)`.
+- Example runner: `mcp_bridge_example.py` defines the example tools (elf names, locations, events) and runs the bridge.
+
+Run the example bridge:
+
 ```bash
-uv run python mcp_bridge_simple.py
+python mcp_bridge_example.py
 ```
 
-You should see:
+You should see something like:
+
 ```
-============================================================
-SIMPLE MCP Bridge Server
-============================================================
-Bridge:    http://127.0.0.1:8081
-Llamafile: http://localhost:8080
-Mode:      Simple simulated tool calling (Flask + requests)
-============================================================
+Starting example bridge on http://127.0.0.1:8081 using local example tools
  * Running on http://127.0.0.1:8081
 ```
 
@@ -84,6 +86,11 @@ uv run python llm_story_working.py
 **Enhanced version (using multiple tools):**
 ```bash
 uv run python llm_story_with_tools.py
+```
+
+Example client (calls `llm_query`):
+```bash
+python llm_story.py
 ```
 
 This will:
@@ -121,20 +128,22 @@ uv run python test_tool_calling.py
 ## Project Structure
 
 ```
-.
-├── mcp_bridge_simple.py      # Working simulated MCP bridge (Flask-based)
-├── mcp_server.py              # MCP server with 3 tools (names, locations, events)
-├── llm_query.py               # LangChain integration with RAG
-├── llm_story_simple.py        # Simple story generator (no RAG)
-├── llm_story_working.py       # Full RAG + MCP story generator
-├── llm_story_with_tools.py    # Using multiple tools
-├── test_simple_bridge.py      # Test the bridge
-├── test_all_tools.py          # Test all three tools
-├── test_deepseek_tools.py     # Test if models support native function calling
-├── silmarillion.txt           # RAG knowledge base
-├── README.md                  # This file
-└── TOOLS_REFERENCE.md         # Complete tools documentation
-```
+. 
+.├── mcp_bridge_simple.py      # Library: factory `create_bridge_app` and helper `run_bridge`
+.├── mcp_bridge_example.py     # Runnable example that defines local tools and runs the bridge
+.├── mcp_server.py             # MCP server (generic API, no default tools)
+.├── llm_query.py              # LangChain integration with RAG (fallbacks when libs missing)
+.├── llm_story.py              # Example client that calls `llm_query` (default example)
+.├── llm_story_simple.py       # Simple story generator (no RAG)
+.├── llm_story_working.py      # Full RAG + MCP story generator
+.├── llm_story_with_tools.py   # Using multiple tools
+.├── test_simple_bridge.py     # Test the bridge
+.├── test_all_tools.py         # Test all three tools
+.├── test_deepseek_tools.py    # Test if models support native function calling
+.├── silmarillion.txt          # RAG knowledge base
+.├── README.md                 # This file
+.└── TOOLS_REFERENCE.md        # Complete tools documentation
+``` 
 
 ## Which Models Support Native Function Calling?
 
