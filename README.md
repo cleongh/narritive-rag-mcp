@@ -55,7 +55,7 @@ Wait until you see `llama server listening at http://localhost:8080`
 
 The bridge code is split into a library and an example runner.
 
-- Library: `bridge.py` exports `create_bridge_app(...)` and `run_bridge(...)`.
+- Library: `mcp_bridge_flask.py` exports `create_bridge_app(...)` and `run_bridge(...)`.
 - Example runner: `mcp_bridge_example.py` defines the example tools (elf names, locations, events) and runs the bridge.
 
 Run the example bridge:
@@ -129,7 +129,7 @@ uv run python test_tool_calling.py
 
 ```
 . 
-.├── mcp_bridge_simple.py      # Library: factory `create_bridge_app` and helper `run_bridge`
+.├── mcp_bridge_flask.py       # Library: factory `create_bridge_app` and helper `run_bridge`
 .├── mcp_bridge_example.py     # Runnable example that defines local tools and runs the bridge
 .├── mcp_server.py             # MCP server (generic API, no default tools)
 .├── llm_query.py              # LangChain integration with RAG (fallbacks when libs missing)

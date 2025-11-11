@@ -180,7 +180,7 @@ elif name == "your_tool_name":
     return [TextContent(type="text", text=result)]
 ```
 
-### 2. Edit `mcp_bridge_simple.py`
+### 2. Edit `mcp_bridge_flask.py`
 
 Update system prompt:
 ```python

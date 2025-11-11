@@ -40,3 +40,5 @@ DOCS_INDEX.md
 FLOW_DIAGRAM.md
 QUICKSTART.md
 .aider*
+.vscode/tasks.json
+.vscode/tasks.json

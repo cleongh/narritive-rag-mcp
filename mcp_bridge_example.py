@@ -6,7 +6,7 @@ This script contains the story-generation example that used to live in
 and starts the Flask bridge using the library's factory.
 """
 import random
-from mcp_bridge_simple import run_bridge, LLAMAFILE_URL
+from mcp_bridge_flask import run_bridge, LLAMAFILE_URL
 
 first_names = ["Luis"]
 last_names = ["Agulló"]
