@@ -13,6 +13,19 @@ import httpx
 vector_store = None
 
 
+def get_welcome_message() -> str:
+    """
+    Devuelve un mensaje de bienvenida multilínea y legible.
+    Centraliza el texto para que sea fácil de modificar.
+    """
+    return (
+        "Bienvenido a llm_query!\n\n"
+        "Esta herramienta consulta un LLM a través del puente MCP y, opcionalmente, usa RAG para contexto.\n\n"
+        "Para suprimir este mensaje, pasa show_welcome=False.\n\n"
+        "--------------------------------------------------\n"
+    )
+
+
 def load_rag(file):
     """Load the Silmarillion text and create a vector store for RAG"""
     global vector_store
@@ -49,7 +62,11 @@ def retrieve_context(query: str, k: int = 3) -> str:
     return context[:1500]  # Max 1500 chars of context
 
 
-async def main(prompt, query, llm_ip, port, timeout, file):
+async def main(prompt, query, llm_ip, port, timeout, file, show_welcome: bool = True):
+    # Mostrar mensaje de bienvenida si está habilitado
+    if show_welcome:
+        print(get_welcome_message())
+
     # Check if MCP bridge is running
     print("Checking MCP bridge connection...")
     try:
@@ -93,6 +110,6 @@ async def main(prompt, query, llm_ip, port, timeout, file):
     
 
 
-def query(query, prompt=lambda context: "", llm_ip="localhost", port=8081, timeout=5.0, file=None):
-    return asyncio.run(main(prompt, query, llm_ip, port, timeout, file))
+def query(query, prompt=lambda context: "", llm_ip="localhost", port=8081, timeout=5.0, file=None, show_welcome: bool = True):
+    return asyncio.run(main(prompt, query, llm_ip, port, timeout, file, show_welcome=show_welcome))
 

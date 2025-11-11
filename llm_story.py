@@ -2,7 +2,7 @@
 from llm_query import query
 
 if __name__ == "__main__":
-
+    # Generate and print the story (no welcome message)
     response = query("very short story of elf painting art creativity Valinor Noldor craftsmanship",
                      file="silmarillion.txt",
                      prompt=lambda context: f"""You are writing a story inspired by J.R.R. Tolkien's legendarium.
@@ -25,7 +25,4 @@ Write the story in a style reminiscent of Tolkien (about 300-400 words).""")
     output = response.content
 
     # Print the story
-    print("\nStory:")
-    print("=" * 60)
     print(output)
-    print("=" * 60)
