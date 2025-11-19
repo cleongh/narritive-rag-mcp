@@ -17,7 +17,7 @@
             "type": "debugpy",
             "request": "launch",
             "preLaunchTask": "uv_sync",
-            "program": "${workspaceFolder}/mcp_bridge.py",
+            "program": "${workspaceFolder}/mcp_bridge_example.py",
             "console": "integratedTerminal",
         }
     ]

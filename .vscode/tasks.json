@@ -65,21 +65,21 @@
 		{
 			"label": "Simple MCP Bridge",
 			"type": "shell",
-			"command": "~/.local/bin/uv run python mcp_bridge_simple.py",
+			"command": "~/.local/bin/uv run python mcp_bridge_flask.py",
 			"isBackground": true,
 			"problemMatcher": []
 		},
 		{
 			"label": "Simple MCP Bridge v2",
 			"type": "shell",
-			"command": "~/.local/bin/uv run python mcp_bridge_simple.py",
+			"command": "~/.local/bin/uv run python mcp_bridge_flask.py",
 			"isBackground": true,
 			"problemMatcher": []
 		},
 		{
 			"label": "MCP Bridge with 3 Tools",
 			"type": "shell",
-			"command": "~/.local/bin/uv run python mcp_bridge_simple.py",
+			"command": "~/.local/bin/uv run python mcp_bridge_flask.py",
 			"isBackground": true,
 			"problemMatcher": []
 		}
